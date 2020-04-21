@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -25,6 +27,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+
 class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
@@ -34,29 +37,34 @@ class _HomePageState extends State<HomePage> {
   String title = 'Flutter to Native';
   Color backGroundColor = Colors.red;
 
-// 注册一个通知
-  static const MethodChannel methodChannel = const MethodChannel('com.pages.your/native_get');
 
-  //Dart调用Native方法，并接收返回值。
-  _iOSPushToVC() async {
-    title = await methodChannel.invokeMethod('FlutterToNative');
+  // 注册一个通知
+  static const EventChannel eventChannel = EventChannel('com.pages.your/native_get');
+  @override
+  void initState() {
+    super.initState();
+    eventChannel.receiveBroadcastStream().listen(_onEvent, onError: _onError);
+  }
+
+  //接收Native消息。
+  void _onEvent(Object event) {
     setState(() {
-      backGroundColor = Colors.green;
+      title = event;
+      backGroundColor = randomColor();
+      //取消监听
+//      eventChannel.receiveBroadcastStream().listen(_onEvent, onError: _onError).cancel();
     });
   }
 
-
-  _HomePageState(){
-    //Native调用Dart方法
-    methodChannel.setMethodCallHandler((MethodCall call){
-      if(call.method  == "NativeToFlutter"){
-        setState(() {
-          title = call.arguments;
-          backGroundColor = Colors.yellow;
-        });
-      }
-      return Future<dynamic>.value();
+  void _onError(Object error) {
+    setState(() {
+      PlatformException exception = error;
+      title = exception?.message ?? 'error';
     });
+  }
+
+  Color randomColor() {
+    return Color.fromARGB(255, Random().nextInt(256)+0, Random().nextInt(256)+0, Random().nextInt(256)+0);
   }
 
   @override
@@ -68,11 +76,13 @@ class _HomePageState extends State<HomePage> {
           behavior: HitTestBehavior.opaque,
           child: new Text(title),
           onTap: (){
-            _iOSPushToVC();
           },
         ),
       ),
     );
   }
 }
+
+
+
 
